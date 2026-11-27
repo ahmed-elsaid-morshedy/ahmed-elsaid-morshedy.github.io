@@ -3,15 +3,16 @@ const N=window.Native||null,B=window.DATA||null,SITE='https://ahmed-elsaid-morsh
 const h=(t,a,...c)=>{const e=document.createElement(t);for(const k in(a||{})){if(k==='class')e.className=a[k];else if(k.startsWith('on'))e[k]=a[k];else e.setAttribute(k,a[k])}c.flat().forEach(x=>{if(x!=null&&x!==false)e.append(x)});return e};
 const store={get(k,d){try{const v=N?N.readText(k+'.json'):localStorage.getItem('k_'+k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{const s=JSON.stringify(v);N?N.writeText(k+'.json',s):localStorage.setItem('k_'+k,s)}catch(e){}}};
 let D=B||{},files=[],dir='',busy={};
-const S={tab:'list',q:'',cat:'الكل',theme:store.get('theme','auto'),favs:store.get('favs',[]),pos:store.get('pos',{}),speed:store.get('speed',1),cur:null};
+const S={seen:store.get('seen',{}),tab:'list',q:'',cat:'الكل',theme:store.get('theme','auto'),favs:store.get('favs',[]),pos:store.get('pos',{}),speed:store.get('speed',1),cur:null};
 const bundled=new Set(((B&&B.audio)||[]).map(a=>a.src));
 try{if(N){dir=N.dirUrl();files=JSON.parse(N.files());const m=N.loadMeta();if(m)D=JSON.parse(m)}}catch(e){}
 const app=document.getElementById('app');
 const au=new Audio();au.preload='none';
 function applyTheme(){const dk=S.theme==='dark'||(S.theme==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',dk);const m=document.querySelector('meta[name=theme-color]');if(m)m.content=dk?'#0e1712':'#1f5a3a';return dk}
 function cat(t){const m=/سورة\s+(آل|ال)?\s*([\u0621-\u064A]+)/.exec(t||'');return m?('سورة '+(m[1]==='آل'?'آل ':(m[1]||''))+m[2]).replace(/\s+/g,' ').trim():'أخرى'}
-function items(){const a=(D.audio||[]).map(i=>({k:'a',id:i.src,title:i.title,dur:i.duration,cat:i.cat||cat(i.title),src:i.src}));const y=(D.items||[]).map(i=>({k:'y',id:i.url,title:i.title,dur:i.duration,cat:cat(i.title),url:i.url,thumb:i.thumb}));return a.concat(y)}
+function items(){const a=(D.audio||[]).map(i=>({k:'a',id:i.src,title:i.title,dur:i.duration,cat:i.cat||cat(i.title),src:i.src,added:i.added}));const y=(D.items||[]).map(i=>({k:'y',id:i.url,title:i.title,dur:i.duration,cat:cat(i.title),url:i.url,thumb:i.thumb}));return a.concat(y)}
 function localSrc(i){if(!N)return i.src;return bundled.has(i.src)?i.src:(files.includes(i.src)?dir+i.src:null)}
+function isNew(i){if(i.k!=='a')return false;let t=i.added?Date.parse(i.added):(S.seen[i.id]||0);return t&&Date.now()-t<7*864e5}
 function fmt(s){s=Math.floor(s||0);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')}
 // player
 const NP=!!(N&&typeof N.mpPlay==='function');
@@ -25,7 +26,8 @@ const eng={
 function buildPlayer(){const t=h('div',{class:'pt'}),pp=h('button',{onclick:()=>eng.toggle()},'▶'),bk=h('button',{onclick:()=>eng.seek(Math.max(0,eng.st().pos-15000))},'‹15'),fw=h('button',{onclick:()=>{const s=eng.st();eng.seek(Math.min(s.dur||1e9,s.pos+15000))}},'15›'),r=h('input',{type:'range',min:0,max:1000,value:0}),tm=h('span',{class:'tm'},'0:00'),sp=h('button',{},S.speed+'x');
 sp.onclick=()=>{const L=[1,1.25,1.5,2,0.75];S.speed=L[(L.indexOf(S.speed)+1)%L.length];eng.speed(S.speed);sp.textContent=S.speed+'x';store.set('speed',S.speed)};
 let drag=false;r.onpointerdown=()=>drag=true;r.onpointerup=()=>drag=false;r.oninput=()=>{const s=eng.st();if(s.dur)eng.seek(r.value/1000*s.dur)};
-const bar=h('div',{id:'player'},t,h('div',{class:'ctl'},bk,pp,fw,r,tm,sp));document.body.append(bar);
+let sl=0,slT=null;const tb2=h('button',{style:'border:0;background:rgba(255,255,255,.2);color:inherit;border-radius:10px;padding:2px 8px;font:inherit;font-size:12px;margin-inline-start:8px'},'⏲ مؤقت النوم');tb2.onclick=()=>{const L=[0,15,30,60];sl=L[(L.indexOf(sl)+1)%L.length];clearTimeout(slT);if(sl){tb2.textContent='⏲ '+sl+' د';slT=setTimeout(()=>{if(eng.st().playing)eng.toggle();sl=0;tb2.textContent='⏲ مؤقت النوم'},sl*60000)}else tb2.textContent='⏲ مؤقت النوم'};
+const bar=h('div',{id:'player'},h('div',{style:'display:flex;align-items:center;justify-content:space-between;gap:6px'},t,tb2),h('div',{class:'ctl'},bk,pp,fw,r,tm,sp));document.body.append(bar);
 let last=0,was=null;
 setInterval(()=>{const s=eng.st();if(!S.cur&&NP&&s.name){const it=items().find(x=>x.src===s.name);if(it){S.cur=it;t.textContent=it.title;bar.classList.add('show')}}
 if(!S.cur)return;if(s.dur&&!drag)r.value=s.pos/s.dur*1000;tm.textContent=fmt(s.pos/1000);pp.textContent=s.playing?'⏸':'▶';
@@ -44,17 +46,18 @@ function chips(){chipBox.textContent='';const cs=['الكل','المفضلة'].c
 function match(i){const q=S.q.trim();if(q&&!(i.title+' '+i.cat).includes(q))return false;if(S.cat==='المفضلة')return S.favs.includes(i.id);if(S.cat!=='الكل'&&i.cat!==S.cat)return false;return true}
 function card(i){const sh=h('button',{class:'fav','aria-label':'مشاركة',onclick:e=>{e.preventDefault();e.stopPropagation();shareTxt(i.title+'\n'+(i.k==='y'?i.url:SITE+i.src)+'\n\nتطبيق الشيخ أحمد السعيد مرشدي: '+APPLINK)}},'⤴'),fav=S.favs.includes(i.id),fb=h('button',{class:'fav','aria-label':'مفضلة',onclick:e=>{e.preventDefault();e.stopPropagation();const x=S.favs.indexOf(i.id);x<0?S.favs.push(i.id):S.favs.splice(x,1);store.set('favs',S.favs);list()}},fav?'♥':'♡');
 if(i.k==='y')return h('a',{class:'card yt',href:i.url,target:'_blank',rel:'noopener'},i.thumb?h('img',{src:i.thumb,alt:'',loading:'lazy',onerror:function(){this.style.display='none'}}):null,h('div',{class:'grow'},h('div',{class:'t'},i.title),h('div',{class:'m'},'يوتيوب · يحتاج إنترنت · '+(i.dur||''))),sh,fb);
-const s=localSrc(i),on=isPlaying(i);
-return h('div',{class:'card'},h('div',{class:'row'},s?h('button',{class:'pbtn',onclick:()=>play(i)},on?'⏸':'▶'):h('span',{class:'pbtn',style:'display:grid;place-items:center;opacity:.5'},'⤓'),h('div',{class:'grow'},h('div',{class:'t'},i.title),h('div',{class:'m'},(i.dur||'')+' · '+(s?'بدون إنترنت':(busy[i.src]?'جاري التحميل...':'سيتم التحميل عند الاتصال بالإنترنت'))+(S.pos[i.id]>5&&s?' · استكمال من '+fmt(S.pos[i.id]):''))),sh,fb))}
-function list(){listBox.textContent='';const L=items().filter(match);const a=L.filter(i=>i.k==='a'),y=L.filter(i=>i.k==='y');
+const s=localSrc(i),on=isPlaying(i);const nw=isNew(i)?h('span',{class:'badge',style:'background:var(--gold);color:#fff;margin-inline-start:6px'},'جديد'):null;
+return h('div',{class:'card'},h('div',{class:'row'},s?h('button',{class:'pbtn',onclick:()=>play(i)},on?'⏸':'▶'):h('span',{class:'pbtn',style:'display:grid;place-items:center;opacity:.5'},'⤓'),h('div',{class:'grow'},h('div',{class:'t'},i.title,nw),h('div',{class:'m'},(i.dur||'')+' · '+(s?'بدون إنترنت':(busy[i.src]?('جاري التحميل'+(busy[i.src]>1?' '+busy[i.src]+'%':'...')):'سيتم التحميل عند الاتصال بالإنترنت'))+(S.pos[i.id]>5&&s?' · استكمال من '+fmt(S.pos[i.id]):''))),sh,fb))}
+function list(){listBox.textContent='';let ch=false;(D.audio||[]).forEach(a=>{if(!S.seen[a.src]){S.seen[a.src]=a.added?Date.parse(a.added):Date.now();ch=true}});if(ch)store.set('seen',S.seen);if(D.updated)listBox.append(h('div',{class:'m',style:'margin:4px 0'},'آخر تحديث: '+D.updated));const L=items().filter(match);const a=L.filter(i=>i.k==='a'),y=L.filter(i=>i.k==='y');
 if(a.length){listBox.append(h('h2',{},'تلاوات داخل التطبيق'));a.forEach(i=>listBox.append(card(i)))}
 if(y.length){listBox.append(h('h2',{},'تلاوات على يوتيوب'),h('div',{class:'note'},'تلاوات يوتيوب تحتاج إنترنت ولا تعمل بدون اتصال.'));y.forEach(i=>listBox.append(card(i)))}
 if(!L.length)listBox.append(h('div',{class:'note'},S.cat==='المفضلة'?'لم تضف أي تلاوة للمفضلة بعد. اضغط ♡ بجانب أي تلاوة.':'لا توجد نتائج.'))}
 function tabList(){const q=h('input',{class:'search',type:'search',placeholder:'ابحث عن تلاوة أو سورة...',value:S.q,oninput:e=>{S.q=e.target.value;list()}});chipBox=h('div',{class:'chips'});listBox=h('div');main.append(q,chipBox,listBox);chips();list()}
 function tabAbout(){main.append(h('h2',{},'عن الشيخ'),h('div',{class:'card'},h('div',{class:'t'},D.tagline||''),h('div',{class:'m'},D.bio||'')));(D.sections||[]).filter(s=>s.h!=='العنوان').forEach(s=>main.append(h('h2',{},s.h),h('div',{class:'card'},h('ul',{class:'l'},s.li.map(x=>h('li',{},x))))));(D.about||[]).forEach(p=>main.append(h('div',{class:'card'},p)))}
 function tabLessons(){main.append(h('h2',{},'الدروس والمواعيد'));const L=D.lessons||[];if(!L.length)main.append(h('div',{class:'note'},'لم يُعلن عن دروس أو مواعيد بعد. ستظهر هنا تلقائياً عند إضافتها.'));L.forEach(l=>main.append(h('div',{class:'card'},h('div',{class:'t'},l.title||''),h('div',{class:'m'},[l.day,l.time,l.place].filter(Boolean).join(' · ')))))}
-function tabContact(){main.append(h('h2',{},'تواصل'));if(D.phone)main.append(h('a',{class:'btn',href:'tel:'+D.phone},'اتصال: 01008082470'));const ad=(D.sections||[]).find(s=>s.h==='العنوان');if(ad)main.append(h('div',{class:'card'},h('div',{class:'t'},'العنوان'),ad.li.map(x=>h('div',{class:'m'},x))));
+function tabContact(){main.append(h('h2',{},'تواصل'));if(D.phone)main.append(h('a',{class:'btn',href:'tel:'+D.phone},'اتصال: 01008082470'));if(D.whatsapp)main.append(h('a',{class:'btn',style:'background:#25a244',href:'https://wa.me/'+D.whatsapp,target:'_blank'},'واتساب: 01023725586'));const ad=(D.sections||[]).find(s=>s.h==='العنوان');if(ad)main.append(h('div',{class:'card'},h('div',{class:'t'},'العنوان'),ad.li.map(x=>h('div',{class:'m'},x))));
 if(D.channel)main.append(h('a',{class:'btn alt',href:D.channel,target:'_blank'},'القناة على يوتيوب'));if(D.tiktok)main.append(h('a',{class:'btn alt',href:D.tiktok,target:'_blank'},'تيك توك'));if(D.site)main.append(h('a',{class:'btn alt',href:D.site,target:'_blank'},'الموقع الرسمي'));
+if(N&&typeof N.storage==='function'){try{const st=JSON.parse(N.storage());main.append(h('div',{class:'note'},'التلاوات المحفوظة على الهاتف: '+st.count+' ('+(st.bytes/1048576).toFixed(1)+' ميجا) · المساحة الفارغة: '+(st.free/1073741824).toFixed(1)+' جيجا'))}catch(e){}}
 main.append(h('button',{class:'btn alt',onclick:()=>shareTxt('حمّل تطبيق الشيخ أحمد السعيد مرشدي (تلاوات وسيرة علمية):\n'+APPLINK)},'⤴ شارك التطبيق'));
 if(N&&typeof N.mpPlay==='function'){const on=()=>N.readText('notify.txt').trim()!=='0';const nb=h('button',{class:'btn alt'},'');const sync=()=>nb.textContent=on()?'🔔 إشعارات التلاوات الجديدة: مفعّلة (اضغط للإيقاف)':'🔕 إشعارات التلاوات الجديدة: متوقفة (اضغط للتفعيل)';nb.onclick=()=>{N.writeText('notify.txt',on()?'0':'1');sync()};sync();main.append(nb)}
 main.append(h('div',{class:'note'},'التطبيق يعمل بدون إنترنت. التلاوات الجديدة تُحمَّل تلقائياً عند الاتصال، وروابط يوتيوب وتيك توك تحتاج إنترنت.'))}
@@ -71,6 +74,7 @@ hero=h('div',{class:'hero',style:cover?'--cover:url('+cover+')':''},tb,photo?h('
 nav=h('nav',{},Object.keys(T).map(k=>h('button',{onclick:()=>{S.tab=k;draw();scrollTo(0,0)}},h('b',{},T[k][1]),T[k][0])));
 app.textContent='';app.append(hero);if(!N)app.append(dl());app.append(main,nav);if(!P.bar)buildPlayer();draw()}
 // sync
+window.onDlp=(n,p)=>{busy[n]=p;if(S.tab==='list')list()};
 window.onDl=(n,ok)=>{delete busy[n];if(ok)files.push(n);if(S.tab==='list')list();next()};
 function pend(){return(D.audio||[]).filter(i=>!bundled.has(i.src)&&!files.includes(i.src)&&!busy[i.src])}
 function next(){if(!N||!navigator.onLine)return;const p=pend()[0];if(p){busy[p.src]=1;if(S.tab==='list')list();N.download(p.src)}}
