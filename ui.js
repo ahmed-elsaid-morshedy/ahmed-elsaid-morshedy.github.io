@@ -46,11 +46,15 @@ main.append(h('div',{class:'note'},'التطبيق يعمل بدون إنترن�
 const T={list:['التلاوات','♪',tabList],about:['عن الشيخ','☰',tabAbout],lessons:['الدروس','◷',tabLessons],contact:['تواصل','☎',tabContact]};
 let nav,hero;
 function draw(){main.textContent='';T[S.tab][2]();[...nav.children].forEach((b,i)=>b.classList.toggle('on',Object.keys(T)[i]===S.tab));document.body.classList.toggle('off',!navigator.onLine)}
+function dl(){const a=h('a',{class:'btn',href:SITE+'1-sheikh.apk',download:'Sheikh-Ahmed-El-Said.apk',style:'font-size:18px;padding:16px'},'⬇ تحميل تطبيق الأندرويد (APK مجاني)');
+return h('div',{class:'wrap',id:'dl'},h('div',{class:'card'},h('div',{class:'t'},'حمّل تطبيق الشيخ أحمد السعيد مرشدي'),h('div',{class:'m'},'يعمل بدون إنترنت، ومجاني تماماً. حجمه حوالي 4 ميجا.'),a,
+h('ol',{class:'l',style:'margin-top:8px'},h('li',{},'اضغط زر التحميل وافتح الملف بعد انتهائه.'),h('li',{},'إذا ظهرت رسالة "لأسباب أمنية، الهاتف غير مسموح له بتثبيت تطبيقات من هذا المصدر"، اضغط "الإعدادات" وفعّل "السماح من هذا المصدر" ثم ارجع.'),h('li',{},'إذا ظهرت رسالة Play Protect، اضغط "مزيد من التفاصيل" ثم "التثبيت على أي حال". التطبيق غير موجود على متجر Play لذلك تظهر هذه الرسالة.'),h('li',{},'اضغط "تثبيت" ثم "فتح".')),
+h('div',{class:'m'},'للأندرويد فقط. على الآيفون: افتح هذا الموقع في Safari ثم زر المشاركة ثم "إضافة إلى الشاشة الرئيسية".')))}
 function build(){const dk=applyTheme();const photo=(B&&B.photo)||D.photo,cover=(B&&B.cover)||D.cover;
 const tb=h('button',{class:'tbtn','aria-label':'الوضع الليلي'},dk?'☀':'☾');tb.onclick=()=>{S.theme=document.documentElement.classList.contains('dark')?'light':'dark';store.set('theme',S.theme);tb.textContent=applyTheme()?'☀':'☾'};
 hero=h('div',{class:'hero',style:cover?'--cover:url('+cover+')':''},tb,photo?h('img',{src:photo,alt:''}):null,h('h1',{},D.name||''),h('p',{},D.tagline||''));
 nav=h('nav',{},Object.keys(T).map(k=>h('button',{onclick:()=>{S.tab=k;draw();scrollTo(0,0)}},h('b',{},T[k][1]),T[k][0])));
-app.textContent='';app.append(hero,main,nav);if(!P.bar)buildPlayer();draw()}
+app.textContent='';app.append(hero);if(!N)app.append(dl());app.append(main,nav);if(!P.bar)buildPlayer();draw()}
 // sync
 window.onDl=(n,ok)=>{delete busy[n];if(ok)files.push(n);if(S.tab==='list')list();next()};
 function pend(){return(D.audio||[]).filter(i=>!bundled.has(i.src)&&!files.includes(i.src)&&!busy[i.src])}
