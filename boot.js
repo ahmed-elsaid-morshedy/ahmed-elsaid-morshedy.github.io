@@ -1,4 +1,4 @@
-(function(){const N=window.Native,V=4;let js='',css='',rv=0;
+(function(){const N=window.Native,V=5;let js='',css='',rv=0;
 try{if(N){rv=+N.readText('ui.ver')||0;if(rv>V){js=N.readText('ui.js');css=N.readText('ui.css')}}}catch(e){}
 function load(){if(js&&css){const s=document.createElement('style');s.textContent=css;document.head.append(s);try{(0,eval)(js+'\n//# sourceURL=ui.js');return}catch(e){}}
 const l=document.createElement('link');l.rel='stylesheet';l.href='ui.css';document.head.append(l);const sc=document.createElement('script');sc.src='ui.js';document.body.append(sc)}
