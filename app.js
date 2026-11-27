@@ -4,7 +4,7 @@ document.getElementById("nm").textContent=d.name;tag.textContent=d.tagline;bio.t
 if(d.photo){photo.src=d.photo;photo.hidden=false}
 if(d.tiktok){tt.href=d.tiktok;tt.hidden=false}
 if(d.phone){wa.href='tel:'+d.phone;wa.textContent='اتصال: 01008082470';wa.hidden=false}
-if(!d.items.length)empty.hidden=false;
+(d.audio||[]).forEach(i=>{const li=document.createElement('li');li.className='t';const s=document.createElement('strong');s.textContent=i.title;const a=document.createElement('audio');a.controls=true;a.preload='none';a.src=i.src;li.append(s,a);alist.append(li)});if(!d.items.length)empty.hidden=false;
 d.items.forEach(i=>{const li=document.createElement('li');const a=document.createElement('a');a.href=i.url;a.target='_blank';a.rel='noopener';
 const im=document.createElement('img');im.src=i.thumb;im.alt='';im.loading='lazy';const s=document.createElement('span');s.textContent=i.title;const m=document.createElement('small');m.textContent=i.duration;
 a.append(im,s,m);li.append(a);list.append(li)})});
