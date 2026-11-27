@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://ahmed-elsaid-morshedy.github.io/sitemap.xml
