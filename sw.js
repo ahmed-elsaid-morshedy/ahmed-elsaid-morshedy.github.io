@@ -1,4 +1,7 @@
-const C='sheikh-v2',A=['./','index.html','style.css','app.js','recitations.json','manifest.webmanifest','8-icon-192.png','9-icon-512.png','7-sheikh.jpg','6-cover.jpg'];
-self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(A))));
-self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==C).map(x=>caches.delete(x))))));
-self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(fetch(e.request).then(r=>{const c2=r.clone();caches.open(C).then(c=>c.put(e.request,c2));return r}).catch(()=>caches.match(e.request)))});
+const C='sheikh-v3',AC='sheikh-audio',A=['./','index.html','style.css','app.js','recitations.json','manifest.webmanifest','8-icon-192.png','9-icon-512.png','7-sheikh.jpg','6-cover.jpg'];
+self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(C).then(c=>Promise.all(A.map(u=>c.add(u).catch(()=>0)))))});
+self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==C&&x!==AC).map(x=>caches.delete(x)))).then(()=>self.clients.claim())));
+async function range(req,res){const b=await res.arrayBuffer(),m=/bytes=(\d*)-(\d*)/.exec(req.headers.get('range'));let s=+m[1]||0,e=m[2]?+m[2]:b.byteLength-1;if(e>=b.byteLength)e=b.byteLength-1;return new Response(b.slice(s,e+1),{status:206,headers:{'Content-Type':res.headers.get('Content-Type')||'audio/mpeg','Content-Range':'bytes '+s+'-'+e+'/'+b.byteLength,'Content-Length':e-s+1,'Accept-Ranges':'bytes'}})}
+self.addEventListener('fetch',e=>{const r=e.request;if(r.method!=='GET')return;const u=new URL(r.url);if(u.origin!==location.origin)return;
+if(/\.mp3$/.test(u.pathname)){e.respondWith((async()=>{const c=await caches.open(AC),h=await c.match(u.pathname.split('/').pop()+'',{ignoreSearch:true})||await c.match(r.url,{ignoreSearch:true});if(h)return r.headers.has('range')?range(r,h):h;return fetch(r)})());return}
+e.respondWith(fetch(r).then(x=>{if(x.ok){const k=x.clone();caches.open(C).then(c=>c.put(r,k))}return x}).catch(async()=>{const c=await caches.open(C);return await c.match(r,{ignoreSearch:true})||(r.mode==='navigate'?await c.match('index.html'):Response.error())}))});
