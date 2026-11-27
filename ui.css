@@ -31,3 +31,4 @@ nav button{flex:1;border:0;background:none;color:var(--mut);padding:8px 0 6px;fo
 #player.show{display:block}#player .pt{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #player .ctl{display:flex;align-items:center;gap:6px;margin-top:4px}#player button{border:0;background:rgba(255,255,255,.2);color:inherit;border-radius:10px;min-width:38px;height:36px;font:inherit;font-size:14px}
 #player input{flex:1;accent-color:var(--gold);direction:ltr}#player .tm{font-size:11px;min-width:38px;text-align:center}
+#player .pt{flex:1;min-width:0}
